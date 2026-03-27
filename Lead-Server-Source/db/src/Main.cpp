@@ -10,6 +10,12 @@
 #include "Marriage.h"
 #include "ItemIDRangeManager.h"
 #include <signal.h>
+#ifdef __WIN32__
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <limits.h>
+#endif
 
 void SetPlayerDBName(const char* c_pszPlayerDBName);
 void SetTablePostfix(const char* c_pszTablePostfix);
@@ -93,6 +99,28 @@ int main()
 	return 1;
 }
 
+std::string GetExecutableDirectory()
+{
+#ifdef __WIN32__
+	char szPath[MAX_PATH];
+	GetModuleFileNameA(NULL, szPath, MAX_PATH);
+	std::string strPath(szPath);
+	size_t pos = strPath.find_last_of("\\/");
+	return (pos != std::string::npos) ? strPath.substr(0, pos) : "";
+#else
+	char szPath[PATH_MAX];
+	ssize_t count = readlink("/proc/self/exe", szPath, PATH_MAX);
+	if (count != -1)
+	{
+		szPath[count] = '\0';
+		std::string strPath(szPath);
+		size_t pos = strPath.find_last_of('/');
+		return (pos != std::string::npos) ? strPath.substr(0, pos) : "";
+	}
+	return "";
+#endif
+}
+
 void emptybeat(LPHEART heart, int pulse)
 {
 	if (!(pulse % heart->passes_per_sec))	// 1 once a second
@@ -105,9 +133,12 @@ void emptybeat(LPHEART heart, int pulse)
 //
 int Start()
 {
-	if (!CConfig::instance().LoadFile("conf.txt"))
+	std::string exeDir = GetExecutableDirectory();
+	std::string configPath = exeDir.empty() ? "conf.txt" : exeDir + "/conf.txt";
+
+	if (!CConfig::instance().LoadFile(configPath.c_str()))
 	{
-		fprintf(stderr, "Loading conf.txt failed.\n");
+		fprintf(stderr, "Loading conf.txt failed (tried: %s).\n", configPath.c_str());
 		return false;
 	}
 
