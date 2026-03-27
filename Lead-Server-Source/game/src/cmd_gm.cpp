@@ -974,161 +974,314 @@ ACMD(do_state)
 	{
 		if (arg1[0] == '#')
 		{
-			tch = CHARACTER_MANAGER::instance().Find(strtoul(arg1+1, NULL, 10));
+			tch = CHARACTER_MANAGER::instance().Find(strtoul(arg1 + 1, NULL, 10));
 		}
 		else
 		{
 			LPDESC d = DESC_MANAGER::instance().FindByCharacterName(arg1);
 
 			if (!d)
+			{
 				tch = NULL;
+			}
 			else
+			{
 				tch = d->GetCharacter();
+			}
 		}
 	}
 	else
+	{
 		tch = ch;
+	}
 
 	if (!tch)
-		return;
+	{
+		CCI* pkCCI = P2P_MANAGER::instance().Find(arg1);
+		if (!pkCCI || !pkCCI->pkDesc)
+		{
+			ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("Player %s isn't currently online."), arg1);
+			return;
+		}
 
+		ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("Player %s is on channel %d."), arg1, (int)pkCCI->bChannel);
+		return;
+	}
 	char buf[256];
 
-	snprintf(buf, sizeof(buf), "%s's State: ", tch->GetName());
+	snprintf(buf, sizeof(buf), "%s's VID:(%u) CH:(%d) State: ", tch->GetName(), (DWORD)tch->GetVID(), g_bChannel);
 
 	if (tch->IsPosition(POS_FIGHTING))
+	{
 		strlcat(buf, "Battle", sizeof(buf));
+	}
 	else if (tch->IsPosition(POS_DEAD))
+	{
 		strlcat(buf, "Dead", sizeof(buf));
+	}
+	else if (tch->IsPosition(POS_FISHING))
+	{
+		strlcat(buf, "Fishing", sizeof(buf));
+	}
+
 	else
+	{
 		strlcat(buf, "Standing", sizeof(buf));
+	}
 
 	if (ch->GetShop())
+	{
 		strlcat(buf, ", Shop", sizeof(buf));
+	}
 
 	if (ch->GetExchange())
+	{
 		strlcat(buf, ", Exchange", sizeof(buf));
+	}
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("%s"), buf);
+	ch->ChatPacket(CHAT_TYPE_INFO, "%s", buf);
 
 	int len;
-	len = snprintf(buf, sizeof(buf), "Coordinate %dx%d (%dx%d)", 
-			tch->GetX(), tch->GetY(), tch->GetX() / 100, tch->GetY() / 100);
+	len = snprintf(buf, sizeof(buf), "Coordinate %ldx%ld (%ldx%ld)", tch->GetX(), tch->GetY(), tch->GetX() / 100, tch->GetY() / 100);
 
-	if (len < 0 || len >= (int) sizeof(buf))
+	if (len < 0 || len >= (int)sizeof(buf))
+	{
 		len = sizeof(buf) - 1;
+	}
 
 	LPSECTREE pSec = SECTREE_MANAGER::instance().Get(tch->GetMapIndex(), tch->GetX(), tch->GetY());
 
 	if (pSec)
 	{
 		TMapSetting& map_setting = SECTREE_MANAGER::instance().GetMap(tch->GetMapIndex())->m_setting;
-		snprintf(buf + len, sizeof(buf) - len, " MapIndex %d Attribute %08X Local Position (%d x %d)", 
-			tch->GetMapIndex(), pSec->GetAttribute(tch->GetX(), tch->GetY()), (tch->GetX() - map_setting.iBaseX)/100, (tch->GetY() - map_setting.iBaseY)/100);
+		snprintf(buf + len, sizeof(buf) - len, " MapIndex %ld Attribute %08X Local Position (%ld x %ld)", tch->GetMapIndex(), pSec->GetAttribute(tch->GetX(), tch->GetY()), (tch->GetX() - map_setting.iBaseX) / 100, (tch->GetY() - map_setting.iBaseY) / 100);
 	}
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("%s"), buf);
+	ch->ChatPacket(CHAT_TYPE_INFO, "%s", buf);
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("LEV %d"), tch->GetLevel());
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("HP %d/%d"), tch->GetHP(), tch->GetMaxHP());
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("SP %d/%d"), tch->GetSP(), tch->GetMaxSP());
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("ATT %d MAGIC_ATT %d SPD %d CRIT %d%% PENE %d%% ATT_BONUS %d%%"),
-			tch->GetPoint(POINT_ATT_GRADE),
-			tch->GetPoint(POINT_MAGIC_ATT_GRADE),
-			tch->GetPoint(POINT_ATT_SPEED),
-			tch->GetPoint(POINT_CRITICAL_PCT),
-			tch->GetPoint(POINT_PENETRATE_PCT),
-			tch->GetPoint(POINT_ATT_BONUS));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("DEF %d MAGIC_DEF %d BLOCK %d%% DODGE %d%% DEF_BONUS %d%%"), 
-			tch->GetPoint(POINT_DEF_GRADE),
-			tch->GetPoint(POINT_MAGIC_DEF_GRADE),
-			tch->GetPoint(POINT_BLOCK),
-			tch->GetPoint(POINT_DODGE),
-			tch->GetPoint(POINT_DEF_BONUS));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("RESISTANCES:"));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("WARR:%3d%% ASAS:%3d%% SURA:%3d%% SHAM:%3d%%"),
-			tch->GetPoint(POINT_RESIST_WARRIOR),
-			tch->GetPoint(POINT_RESIST_ASSASSIN),
-			tch->GetPoint(POINT_RESIST_SURA),
-			tch->GetPoint(POINT_RESIST_SHAMAN));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("SWORD:%3d%% THSWORD:%3d%% DAGGER:%3d%% BELL:%3d%% FAN:%3d%% BOW:%3d%%"),
-			tch->GetPoint(POINT_RESIST_SWORD),
-			tch->GetPoint(POINT_RESIST_TWOHAND),
-			tch->GetPoint(POINT_RESIST_DAGGER),
-			tch->GetPoint(POINT_RESIST_BELL),
-			tch->GetPoint(POINT_RESIST_FAN),
-			tch->GetPoint(POINT_RESIST_BOW));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("FIRE:%3d%% ELEC:%3d%% MAGIC:%3d%% WIND:%3d%% CRIT:%3d%% PENE:%3d%%"),
-			tch->GetPoint(POINT_RESIST_FIRE),
-			tch->GetPoint(POINT_RESIST_ELEC),
-			tch->GetPoint(POINT_RESIST_MAGIC),
-			tch->GetPoint(POINT_RESIST_WIND),
-			tch->GetPoint(POINT_RESIST_CRITICAL),
-			tch->GetPoint(POINT_RESIST_PENETRATE));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("ICE:%3d%% EARTH:%3d%% DARK:%3d%%"),
-			tch->GetPoint(POINT_RESIST_ICE),
-			tch->GetPoint(POINT_RESIST_EARTH),
-			tch->GetPoint(POINT_RESIST_DARK));
+	ch->ChatPacket(CHAT_TYPE_INFO, "Level %d", tch->GetLevel());
+	ch->ChatPacket(CHAT_TYPE_INFO, "HP %d/%d", tch->GetHP(), tch->GetMaxHP());
+	ch->ChatPacket(CHAT_TYPE_INFO, "SP %d/%d", tch->GetSP(), tch->GetMaxSP());
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("MALL:"));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("ATT:%3d%% DEF:%3d%% EXP:%3d%% ITEMx%d GOLDx%d"),
-			tch->GetPoint(POINT_MALL_ATTBONUS),
-			tch->GetPoint(POINT_MALL_DEFBONUS),
-			tch->GetPoint(POINT_MALL_EXPBONUS),
-			tch->GetPoint(POINT_MALL_ITEMBONUS) / 10,
-			tch->GetPoint(POINT_MALL_GOLDBONUS) / 10);
+	const std::vector<std::pair<std::string, std::vector<std::pair<std::string, int>>>> point_map =
+	{
+		{
+			"GENERAL OFF:",
+			{
+				{ "ATT", POINT_ATT_GRADE },
+				{ "MAGIC_ATT", POINT_MAGIC_ATT_GRADE },
+				{ "SPD", POINT_ATT_SPEED },
+				{ "CRIT", POINT_CRITICAL_PCT },
+				{ "PENE", POINT_PENETRATE_PCT },
+				{ "ATT_BONUS", POINT_ATT_BONUS },
+			}
+		},
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("BONUS:"));
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("SKILL:%3d%% NORMAL:%3d%% SKILL_DEF:%3d%% NORMAL_DEF:%3d%%"),
-			tch->GetPoint(POINT_SKILL_DAMAGE_BONUS),
-			tch->GetPoint(POINT_NORMAL_HIT_DAMAGE_BONUS),
-			tch->GetPoint(POINT_SKILL_DEFEND_BONUS),
-			tch->GetPoint(POINT_NORMAL_HIT_DEFEND_BONUS));
+		{
+			"GENERAL DEF:",
+			{
+				{ "DEF", POINT_DEF_GRADE },
+				{ "MAGIC_DEF", POINT_MAGIC_DEF_GRADE },
+				{ "BLOCK", POINT_BLOCK },
+				{ "DODGE", POINT_DODGE },
+				{ "DEF_BONUS", POINT_DEF_BONUS },
+			}
+		},
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("HUMAN:%3d%% ANIMAL:%3d%% ORC:%3d%% MILGYO:%3d%% UNDEAD:%3d%%"),
-			tch->GetPoint(POINT_ATTBONUS_HUMAN),
-			tch->GetPoint(POINT_ATTBONUS_ANIMAL),
-			tch->GetPoint(POINT_ATTBONUS_ORC),
-			tch->GetPoint(POINT_ATTBONUS_MILGYO),
-			tch->GetPoint(POINT_ATTBONUS_UNDEAD));
+		{
+			"RESISTANCES (PvP):",
+			{
+				{ "WARRIOR", POINT_RESIST_WARRIOR },
+				{ "ASSASSIN", POINT_RESIST_ASSASSIN },
+				{ "SURA", POINT_RESIST_SURA },
+				{ "SHAMAN", POINT_RESIST_SURA },
+#ifdef ENABLE_WOLFMAN_CHARACTER
+				{ "WOLFMAN", POINT_RESIST_WOLFMAN },
+#endif
+#ifdef BONUS_RESIST_HUMAN
+				{ "HUMAN", POINT_RESIST_HUMAN },
+#endif
+			}
+		},
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("DEVIL:%3d%% INSECT:%3d%% FIRE:%3d%% ICE:%3d%% DESERT:%3d%%"),
-			tch->GetPoint(POINT_ATTBONUS_DEVIL),
-			tch->GetPoint(POINT_ATTBONUS_INSECT),
-			tch->GetPoint(POINT_ATTBONUS_FIRE),
-			tch->GetPoint(POINT_ATTBONUS_ICE),
-			tch->GetPoint(POINT_ATTBONUS_DESERT));
+		{
+			"RESISTANCES (Weapons):",
+			{
+				{ "SWORD", POINT_RESIST_SWORD },
+				{ "TWOHAND", POINT_RESIST_TWOHAND },
+				{ "DAGGER", POINT_RESIST_DAGGER },
+				{ "BOW", POINT_RESIST_BOW },
+				{ "BELL", POINT_RESIST_BELL },
+				{ "FAN", POINT_RESIST_FAN },
+#ifdef ENABLE_WOLFMAN_CHARACTER
+				{ "CLAW", POINT_RESIST_CLAW },
+#endif
+			}
+		},
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("TREE:%3d%% MONSTER:%3d%%"),
-			tch->GetPoint(POINT_ATTBONUS_TREE),
-			tch->GetPoint(POINT_ATTBONUS_MONSTER));
+		{
+			"RESISTANCES (Elements):",
+			{
+				{ "FIRE", POINT_RESIST_FIRE },
+				{ "ELEC", POINT_RESIST_ELEC },
+				{ "ICE", POINT_RESIST_ICE },
+				{ "WIND", POINT_RESIST_WIND },
+				{ "EARTH", POINT_RESIST_EARTH },
+				{ "DARK", POINT_RESIST_DARK },
+			}
+		},
 
-	ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("WARR:%3d%% ASAS:%3d%% SURA:%3d%% SHAM:%3d%%"),
-			tch->GetPoint(POINT_ATTBONUS_WARRIOR),
-			tch->GetPoint(POINT_ATTBONUS_ASSASSIN),
-			tch->GetPoint(POINT_ATTBONUS_SURA),
-			tch->GetPoint(POINT_ATTBONUS_SHAMAN));
+		{
+			"RESISTANCES (Misc.):",
+			{
+				{ "MAGIC", POINT_RESIST_MAGIC },
+				{ "CRITICAL", POINT_RESIST_CRITICAL },
+				{ "PENETRATE", POINT_RESIST_PENETRATE },
+			}
+		},
+
+		{
+			"MALL:",
+			{
+				{ "ATT", POINT_MALL_ATTBONUS },
+				{ "DEF", POINT_MALL_DEFBONUS },
+				{ "EXP", POINT_MALL_EXPBONUS },
+				{ "ITEM", POINT_MALL_ITEMBONUS },
+				{ "GOLD", POINT_MALL_GOLDBONUS },
+			}
+		},
+
+		{
+			"BONUS (Misc.):",
+			{
+				{ "DSS", POINT_NORMAL_HIT_DAMAGE_BONUS },
+				{ "FKS", POINT_SKILL_DAMAGE_BONUS },
+				{ "NORMAL_DEF", POINT_NORMAL_HIT_DEFEND_BONUS },
+				{ "SKILL_DEF", POINT_SKILL_DEFEND_BONUS },
+			}
+		},
+
+		{
+			"BONUS (Races):",
+			{
+				{ "HUMAN", POINT_ATTBONUS_HUMAN },
+				{ "ANIMAL", POINT_ATTBONUS_ANIMAL },
+				{ "ORC", POINT_ATTBONUS_ORC },
+				{ "MILGYO", POINT_ATTBONUS_MILGYO },
+				{ "UNDEAD", POINT_ATTBONUS_UNDEAD },
+				{ "DEVIL", POINT_ATTBONUS_DEVIL },
+#ifdef STRONG_AGAINST_LEGENDS
+				{ "LEGEND", POINT_ATTBONUS_LEGENDS },
+#endif
+#ifdef STRONG_AGAINST_STONES
+				{ "STONE", 	POINT_ATTBONUS_STONE },
+#endif
+#ifdef STRONG_AGAINST_DESERT
+				{ "DESERT", 	POINT_ATTBONUS_DESERT },
+#endif
+#ifdef STRONG_AGAINST_INSECT
+				{ "INSECT", 	POINT_ATTBONUS_INSECT },
+#endif
+
+			}
+		},
+
+		{
+			"BONUS (Misc.):",
+			{
+				{ "MONSTER", POINT_ATTBONUS_MONSTER },
+
+				{ "FIRE", POINT_ATTBONUS_FIRE },
+				{ "ICE", POINT_ATTBONUS_ICE },
+#ifdef ELEMENT_SYSTEM
+				{ "ELEC", POINT_ATTBONUS_ELEC },
+				{ "WIND", POINT_ATTBONUS_WIND },
+				{ "EARTH", POINT_ATTBONUS_EARTH },
+				{ "DARK", POINT_ATTBONUS_DARK },
+#endif
+			}
+		},
+
+		{
+			"BONUS (PvP):",
+			{
+				{ "WARRIOR", POINT_ATTBONUS_WARRIOR },
+				{ "ASSASSIN", POINT_ATTBONUS_ASSASSIN },
+				{ "SURA", POINT_ATTBONUS_SURA },
+				{ "SHAMAN", POINT_ATTBONUS_SHAMAN },
+#ifdef ENABLE_WOLFMAN_CHARACTER
+				{ "WOLFMAN", POINT_ATTBONUS_WOLFMAN },
+#endif
+			}
+		},
+
+		{
+			"IMMUNE:",
+			{
+				{ "STUN", POINT_IMMUNE_STUN },
+				{ "SLOW", POINT_IMMUNE_SLOW },
+				{ "FALL", POINT_IMMUNE_FALL },
+			}
+		},
+	};
+
+	for (const auto& it : point_map)
+	{
+		ch->ChatPacket(CHAT_TYPE_GUILD, it.first.c_str());
+
+		std::string strBuf;
+
+		for (const auto& it2 : it.second)
+		{
+			long long value = ch->GetPoint(it2.second);
+
+			switch (it2.second)
+			{
+			case POINT_MALL_ITEMBONUS:
+			case POINT_MALL_GOLDBONUS:
+				value /= 10;
+				break;
+
+			default:
+				break;
+			}
+
+			strBuf.append(it2.first + ": " + std::to_string(value) + " | ");
+		}
+
+		ch->ChatPacket(CHAT_TYPE_INFO, strBuf.c_str());
+	}
 
 	for (int i = 0; i < MAX_PRIV_NUM; ++i)
+	{
 		if (CPrivManager::instance().GetPriv(tch, i))
 		{
 			int iByEmpire = CPrivManager::instance().GetPrivByEmpire(tch->GetEmpire(), i);
 			int iByGuild = 0;
 
 			if (tch->GetGuild())
+			{
 				iByGuild = CPrivManager::instance().GetPrivByGuild(tch->GetGuild()->GetID(), i);
+			}
 
 			int iByPlayer = CPrivManager::instance().GetPrivByCharacter(tch->GetPlayerID(), i);
 
 			if (iByEmpire)
-				ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("%s for empire : %d"), LC_TEXT(c_apszPrivNames[i]), iByEmpire);
+			{
+				ch->ChatPacket(CHAT_TYPE_INFO, "%s for empire : %d", LC_TEXT(c_apszPrivNames[i]), iByEmpire);
+			}
 
 			if (iByGuild)
-				ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("%s for guild : %d"), LC_TEXT(c_apszPrivNames[i]), iByGuild);
+			{
+				ch->ChatPacket(CHAT_TYPE_INFO, "%s for guild : %d", LC_TEXT(c_apszPrivNames[i]), iByGuild);
+			}
 
 			if (iByPlayer)
-				ch->ChatPacket(CHAT_TYPE_INFO, LC_TEXT("%s for player : %d"), LC_TEXT(c_apszPrivNames[i]), iByPlayer);
+			{
+				ch->ChatPacket(CHAT_TYPE_INFO, "%s for player : %d", LC_TEXT(c_apszPrivNames[i]), iByPlayer);
+			}
 		}
+	}
 }
 
 struct notice_packet_func
