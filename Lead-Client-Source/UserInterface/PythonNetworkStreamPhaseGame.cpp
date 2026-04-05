@@ -1810,6 +1810,9 @@ bool CPythonNetworkStream::RecvQuestInfoPacket()
 	if (QUEST_PACKET_TYPE_END == byQuestPacketType)
 	{
 		rkQuest.DeleteQuestInstance(QuestInfo.index);
+#ifdef ENABLE_CLEAR_LETTER_FIX
+		PyCallClassMemberFunc(m_apoPhaseWnd[PHASE_WINDOW_GAME], "OnClearLetter", Py_BuildValue("(i)", QuestInfo.index));
+#endif
 	}
 	else if (QUEST_PACKET_TYPE_UPDATE == byQuestPacketType)
 	{

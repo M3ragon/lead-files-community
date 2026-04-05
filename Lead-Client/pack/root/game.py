@@ -2226,6 +2226,11 @@ class GameWindow(ui.ScriptWindow):
 
 	# END_OF_WEDDING
 
+	if app.ENABLE_CLEAR_LETTER_FIX:
+		def OnClearLetter(self, index):
+			if self.interface:
+				self.interface.BINARY_ClearQuest(index)
+
 	def RefreshSwitchbotWindow(self):
 		self.interface.RefreshSwitchbotWindow()
 
